@@ -28,8 +28,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
 public class AWS_Scrape {
-    public static final String[] propertyCriteria = { "Address", "Geocoded Address", "Latitude", "Longitude", "Type",
-            "Term", "Square Footage", "Emails", "Phone Numbers", "Contact Names" };
     public static final HashMap<String, String> abbreviations = new HashMap<String, String>() {
         {
             put("alabama", "AL");
@@ -426,8 +424,8 @@ public class AWS_Scrape {
                 contacts.add("**Unknown**");
             } else {
                 for(String email : emails) {
-                    // isolate name from email address ("zackross@..."
-                    // -> "zackross")
+                    // isolate name from email address ("zack@..."
+                    // -> "zack")
                     String searchName = email.substring(0, email.indexOf("@")).toLowerCase();
                     if(searchName.contains(".")) {
                         // search for "zack" if email is "zack.rossman@..."
@@ -445,29 +443,23 @@ public class AWS_Scrape {
                                     entry = token.substring(0, 1).toUpperCase() + token.substring(1).toLowerCase() + " "
                                             + lastName.substring(0, 1).toUpperCase()
                                             + lastName.substring(1).toLowerCase();
-                                    if(entry.contains("@")) {
-                                        // for case that email itself is the
-                                        // only
-                                        // matched string, return the text
-                                        // before "@"
-                                        entry = entry.substring(entry.indexOf(searchName), entry.indexOf("@"));
-                                    }
-                                    contacts.add(entry);
-                                    foundContact = true;
                                 } else if(!hasPeriod && token.contains(searchName.substring(1, searchName.length()))) {
-                                    // serarch for last name for emails with
+                                    // search for last name for emails with
                                     // format zrossman@...
                                     entry = lastToken.substring(0, 1).toUpperCase()
                                             + lastToken.substring(1).toLowerCase() + " "
                                             + token.substring(0, 1).toUpperCase() + token.substring(1).toLowerCase();
-                                    if(entry.contains("@")) {
-                                        // handle case where email is found,
-                                        // just return the username
-                                        entry = entry.substring(entry.indexOf(0), entry.indexOf("@"));
-                                    }
+                                }
+                                if(entry.contains("@")) {
+                                    // for case that email itself is the
+                                    // only matched string
+                                    entry = entry.substring(entry.indexOf(0), entry.indexOf("@"));
+                                }
+                                if(entry.length() > 0) {
                                     contacts.add(entry);
                                     foundContact = true;
                                 }
+                                entry = "";
                                 lastToken = token;
                             } catch(java.lang.IndexOutOfBoundsException e) {
                                 break;

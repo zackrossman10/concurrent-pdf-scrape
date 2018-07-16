@@ -11,7 +11,6 @@
 package com.propertycapsule.service.pdf;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -31,7 +30,6 @@ import org.json.JSONObject;
 public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Object>[]>, String> {
     public static final String s3InputBucket = "flyerdata";
     public static final String s3OutputBucket = "flyeroutput";
-    public static final String s3NoAddressBucket = "noaddress";
     @SuppressWarnings("deprecation")
     public static AmazonS3 s3Client = new AmazonS3Client(DefaultAWSCredentialsProviderChain.getInstance());
     public static Geocode geocoder = new Geocode();
@@ -60,6 +58,7 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
         String s3InputKey = records.getJSONObject(0).getJSONObject("s3").getJSONObject("object").getString("key")
                 .replace("+", " ").replace("%2C", ",");
         String fileExtension = s3InputKey.substring(s3InputKey.length() - 4, s3InputKey.length()).toLowerCase();
+        //only handle .pdf uploads to S3
         if(fileExtension.equals(".pdf")) {
             File tempPdfFile = createTmp("flyer", ".pdf");
             if(s3Client.doesObjectExist(s3InputBucket, s3InputKey)) {
@@ -68,6 +67,7 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
                 String jsonOutputName = s3InputKey.substring(0, s3InputKey.length() - 4) + ".json";
                 s3Client.putObject(s3OutputBucket, jsonOutputName, jsonResult);
             } else {
+                //handle case where s3 object cannot be retrieved
                 s3Client.putObject(s3OutputBucket, s3InputKey + "_NOT_FOUND", tempPdfFile);
             }
         }

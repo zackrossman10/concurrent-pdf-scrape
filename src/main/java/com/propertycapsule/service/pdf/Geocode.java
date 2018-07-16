@@ -39,6 +39,31 @@ public class Geocode {
      * @return Hashmap containing an address, latitude, and longitude supplied
      *         by Google Maps API
      */
+    public void getParallelGeocodedInfo(String scrapedAddress) {
+        try {
+            GeocodingResult[] results = GeocodingApi.geocode(context, scrapedAddress).await();
+            if(results.length > 0) {
+                ParallelScrape.geocodedAddress = gson.toJson(results[0].formattedAddress).replaceAll("\"", "");
+                ParallelScrape.addressType = gson.toJson(results[0].addressComponents[0].types[0]).replaceAll("\"", "");
+                ParallelScrape.latitude = gson.toJson(results[0].geometry.location.lat);
+                ParallelScrape.longitude = gson.toJson(results[0].geometry.location.lng);
+                ParallelScrape.levDistance = getLevDistance(scrapedAddress, results[0].formattedAddress);
+            }
+        } catch(IOException e) {
+            e.printStackTrace();
+        } catch(InterruptedException i) {
+            i.printStackTrace();
+        } catch(ApiException a) {
+            a.printStackTrace();
+        }
+    }
+    
+    /**
+     * @param scrapedAddress
+     *            the address scraped from the pdf in Read_Text
+     * @return Hashmap containing an address, latitude, and longitude supplied
+     *         by Google Maps API
+     */
     public HashMap<String, String> getGeocodedInfo(String scrapedAddress) {
         // if map not cleared, failed geocode request returns last successful
         // address
