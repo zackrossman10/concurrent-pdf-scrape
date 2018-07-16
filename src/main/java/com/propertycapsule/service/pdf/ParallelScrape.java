@@ -38,9 +38,8 @@ public class ParallelScrape {
     public static String longitude = "";
     public static String levDistance = "";
 
-     
-    public static void main(String[] args) {
-        File input = new File("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/144 Parnassas_colliers.pdf");
+    public static File scrape(File input) {
+//        File input = new File("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/144 Parnassas_colliers.pdf");
         PDDocument document = null;
         try {
             document = PDDocument.load(input);
@@ -61,7 +60,7 @@ public class ParallelScrape {
             }
         }
         getGeocodedAddress();
-        resultsToJson();
+        return resultsToJson();
     }
     
     public static void getGeocodedAddress() {

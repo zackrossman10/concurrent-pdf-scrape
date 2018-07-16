@@ -63,7 +63,8 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
             File tempPdfFile = createTmp("flyer", ".pdf");
             if(s3Client.doesObjectExist(s3InputBucket, s3InputKey)) {
                 writeObjToTmp(s3InputBucket, s3InputKey, tempPdfFile);
-                File jsonResult = AWS_Scrape.scrape(tempPdfFile);
+//                File jsonResult = AWS_Scrape.scrape(tempPdfFile);
+                File jsonResult = ParallelScrape.scrape(tempPdfFile);
                 String jsonOutputName = s3InputKey.substring(0, s3InputKey.length() - 4) + ".json";
                 s3Client.putObject(s3OutputBucket, jsonOutputName, jsonResult);
             } else {
