@@ -28,7 +28,8 @@ import com.google.gson.JsonParser;
 import com.google.maps.model.GeocodingResult;
 
 public class ParallelScraper {
-    //priority queues to accumulate property data scraped by threads operating in parallel
+    // priority queues to accumulate property data scraped by threads operating
+    // in parallel
     public static PriorityQueue<Entry> address;
     public static PriorityQueue<Entry> term;
     public static PriorityQueue<Entry> squareFootage;
@@ -42,7 +43,7 @@ public class ParallelScraper {
     public static final int poolSize = 5;
 
     public ParallelScraper() {
-        //redeclare static vars to start from clean slate
+        // redeclare static vars to start from clean slate
         address = new PriorityQueue<>();
         term = new PriorityQueue<>();
         squareFootage = new PriorityQueue<>();
@@ -53,17 +54,25 @@ public class ParallelScraper {
         gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
+    /**
+     * Creates and manages threads that scrape a PDF file
+     * 
+     * @param input
+     *            PDF file to be scraped
+     * @return json file with scraped property data
+     */
     public File scrape(File input) {
         PDDocument document = null;
         try {
             document = PDDocument.load(input);
-            //translate PDF into multiple txt files of size <parsedPageLength> chars
+            // translate PDF into multiple txt files of size <parsedPageLength>
+            // chars
             ArrayList<File> txtFiles = stringToMultipleTxts(pdfToString(document));
-            //create pool for threading
+            // create pool for threading
             ExecutorService pool = Executors.newFixedThreadPool(poolSize);
             List<Runnable> arrTasks = new ArrayList<Runnable>();
             int pageCounter = 1;
-            //accumulate tasks
+            // accumulate tasks
             for(File file : txtFiles) {
                 Runnable task = new ScrapeTask(file, pageCounter);
                 arrTasks.add(task);
@@ -73,7 +82,7 @@ public class ParallelScraper {
                 pool.execute(task);
             }
             pool.shutdown();
-            //wait for threads to finish
+            // wait for threads to finish
             try {
                 while(!pool.awaitTermination(24L, TimeUnit.HOURS)) {
                     System.out.println("Not yet. Still waiting for termination");
@@ -91,28 +100,12 @@ public class ParallelScraper {
                     e.printStackTrace();
                 }
             }
-        } 
+        }
         return resultsToJson();
     }
 
-    public void getGeocodedAddress() {
-        if(!address.isEmpty()) {
-            // normalize address strings to for better consistency with
-            // geocoder
-            String cleanEntry = address.peek().getValue().replace(" - ", "-").replace(" – ", "-").replace("–", "-")
-                    .replace("street", "st").toLowerCase();
-            // translate addresses like "919-920 bath st." to "919 bath st."
-            // for better geocoder matching
-            if(cleanEntry.matches("[0-9]*-[0-9]* .*")) {
-                cleanEntry = cleanEntry.substring(0, cleanEntry.indexOf("-"))
-                        + cleanEntry.substring(cleanEntry.indexOf(" "));
-            }
-            geocoder.getParallelGeocodedInfo(cleanEntry);
-        }
-    }
-
     /**
-     * Use PDFBox to extract text from a PDF to a string
+     * Extract text from a PDF to a string using PDF Box
      * 
      * @param input
      *            PDF file to scrape
@@ -134,7 +127,7 @@ public class ParallelScraper {
     }
 
     /**
-     * Write a string with PDF text to multiple smaller txt files
+     * Write a string to multiple smaller txt files
      * 
      * @param pdfText
      *            the string containing PDF text from PDFStripper
@@ -144,7 +137,7 @@ public class ParallelScraper {
         ArrayList<File> outputTxts = new ArrayList<File>();
         int textLength = pdfText.length();
         int startIndex = 0;
-        //use parsedPageLength to determine character size of each file
+        // use parsedPageLength to determine character size of each file
         int endIndex = textLength > parsedPageLength ? parsedPageLength : textLength;
         String textSegment = "";
         File outputTxt = null;
@@ -177,12 +170,8 @@ public class ParallelScraper {
     }
 
     /**
-     * Format the scraped information from all PDFs into one new .json file
+     * Format scraped information from a PDF into .json file
      * 
-     * @param results
-     *            contains the property data for every pdf file processed
-     * @param inputPdfNames
-     *            -> arraylist of names of pdfs that were scraped
      * @return json file containing property information
      */
     public File resultsToJson() {
@@ -193,13 +182,17 @@ public class ParallelScraper {
             if(!address.isEmpty()) {
                 String scrapedAddress = address.peek().getValue();
                 fileObject.put("scraped_address", scrapedAddress);
-                //Use Geocoder API to validate address, get property lat/long
+                // Use Geocoder API to validate address, get property lat/long
                 GeocodingResult[] geoResults = geocoder.getParallelGeocodedInfo(scrapedAddress);
                 if(geoResults.length > 0) {
-                    fileObject.put("geocoded_address", gson.toJson(geoResults[0].formattedAddress).replaceAll("\"", ""));
-                    fileObject.put("address_type", gson.toJson(geoResults[0].addressComponents[0].types[0]).replaceAll("\"", ""));
-                    fileObject.put("latitude", gson.toJson(geoResults[0].geometry.location.lat));
-                    fileObject.put("longitude", gson.toJson(geoResults[0].geometry.location.lng));
+                    String geocodedAddress = gson.toJson(geoResults[0].formattedAddress).replaceAll("\"", "");
+                    String addressType = gson.toJson(geoResults[0].addressComponents[0].types[0]).replaceAll("\"", "");
+                    String latitude = gson.toJson(geoResults[0].geometry.location.lat);
+                    String longitude = gson.toJson(geoResults[0].geometry.location.lng);
+                    fileObject.put("geocoded_address", geocodedAddress);
+                    fileObject.put("address_type", addressType);
+                    fileObject.put("latitude", latitude);
+                    fileObject.put("longitude", longitude);
                 }
             }
             if(!term.isEmpty()) {
@@ -208,7 +201,8 @@ public class ParallelScraper {
             if(!squareFootage.isEmpty()) {
                 fileObject.put("square_footage", squareFootage.peek().getValue());
             }
-            //for fields that can include mulitple vals, put each val to a JSON list
+            // for fields that can include mulitple vals, put each val to a JSON
+            // list
             if(!emails.isEmpty()) {
                 JSONArray list = new JSONArray();
                 while(!emails.isEmpty()) {

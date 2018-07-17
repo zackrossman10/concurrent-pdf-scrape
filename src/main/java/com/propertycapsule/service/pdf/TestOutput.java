@@ -82,46 +82,47 @@ public class TestOutput {
             if(!outputCsv.exists()) {
                 outputCsv.createNewFile();
                 pw = new FileWriter(new File(outputFilePath + "output.csv"), true);
-                sb.append(
-                        "PDFName, Scraped Address, Term, Square Footage, Emails, Phone Numbers, Contact Names\n");
+                sb.append("PDFName, Scraped Address, Term, Square Footage, Emails, Phone Numbers, Contact Names\n");
             } else {
                 pw = new FileWriter(new File(outputFilePath + "output.csv"), true);
             }
             sb.append("\"" + inputPdfName + "\"");
             sb.append(',');
-            String entry = ParallelScraper.address.peek() != null ? ParallelScraper.address.peek().getValue(): "**";
+            String entry = ParallelScraper.address.peek() != null ? ParallelScraper.address.peek().getValue() : "**";
             sb.append("\"" + entry + "\"");
             sb.append(',');
-            entry = ParallelScraper.term.peek() != null ? ParallelScraper.term.peek().getValue(): "**";
+            entry = ParallelScraper.term.peek() != null ? ParallelScraper.term.peek().getValue() : "**";
             sb.append("\"" + entry + "\" ");
             sb.append(',');
-            entry = ParallelScraper.squareFootage.peek() != null ? ParallelScraper.squareFootage.peek().getValue(): "**";
+            entry = ParallelScraper.squareFootage.peek() != null ? ParallelScraper.squareFootage.peek().getValue()
+                    : "**";
             sb.append("\"" + entry + "\"");
             sb.append(',');
 
+            //make sure parallel scraper is not also outputting results to .json
             String emailAcc = "";
             Entry email;
             while((email = ParallelScraper.emails.poll()) != null) {
-                emailAcc+= email.getValue()+"/";
+                emailAcc += email.getValue() + "/";
             }
             entry = emailAcc.length() > 0 ? emailAcc : "**,";
-            sb.append("\""+entry+"\"");
+            sb.append("\"" + entry + "\"");
             sb.append(',');
             String phoneAcc = "";
             Entry phone;
             while((phone = ParallelScraper.phoneNumbers.poll()) != null) {
-                phoneAcc += phone.getValue()+" /";
+                phoneAcc += phone.getValue() + " /";
             }
             entry = phoneAcc.length() > 0 ? phoneAcc : "**";
-            sb.append("\""+entry+"\"");
+            sb.append("\"" + entry + "\"");
             sb.append(',');
             String contactAcc = "";
             Entry contact;
             while((contact = ParallelScraper.contactNames.poll()) != null) {
-                contactAcc += contact.getValue()+"/";
+                contactAcc += contact.getValue() + "/";
             }
             entry = contactAcc.length() > 0 ? contactAcc : "**";
-            sb.append("\""+contactAcc+"\"");
+            sb.append("\"" + contactAcc + "\"");
             pw.write(sb.append('\n').toString());
         } catch(IOException e) {
             e.printStackTrace();

@@ -75,21 +75,23 @@ public class ScrapeTask implements Runnable {
     private File txtDocument;
 
     /**
-     * @param inputTxt the txt doc to scrape for property info
-     * @param number page number that this txt doc represents in the property pdf
+     * @param inputTxt
+     *            the txt doc to scrape for property info
+     * @param number
+     *            page number that this txt doc represents in the property pdf
      */
     public ScrapeTask(File inputTxt, int number) {
-        //clean the txt file for better parsing in scrapeTxt()
+        // clean the txt file for better parsing in scrapeTxt()
         txtDocument = cleanTxt(inputTxt);
         taskPageNumber = number;
     }
 
     public void run() {
-//        System.out.println("Running "+Integer.toString(taskPageNumber));
+        // System.out.println("Running "+Integer.toString(taskPageNumber));
         scrapeTxt();
-//        System.out.println("Finished "+Integer.toString(taskPageNumber));
+        // System.out.println("Finished "+Integer.toString(taskPageNumber));
     }
-    
+
     /**
      * Reformat the txt file, prepare for parsing
      * 

@@ -34,7 +34,7 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
     public static Geocode geocoder = new Geocode();
 
     // simple aws testing code
-    public static void main(String[] args) {        
+    public static void main(String[] args) {
         File tempPdfFile = new File(
                 "/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/_20151113 Lonetree.pdf");
         ParallelScraper pScraper = new ParallelScraper();
@@ -74,7 +74,7 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
                 }
             } catch(IOException e) {
                 e.printStackTrace();
-            } 
+            }
         }
         return s3InputKey;
     }

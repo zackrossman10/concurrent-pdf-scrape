@@ -1,3 +1,10 @@
+/**
+ * @author zacharycolerossman
+ * @version 7/17/18
+ * 
+ * Allows access to API keys in resources/config.properties file
+ */
+
 package com.propertycapsule.service.pdf;
 
 import java.io.IOException;

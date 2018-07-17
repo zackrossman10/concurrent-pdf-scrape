@@ -35,7 +35,7 @@ public class Geocode {
      *         by Google Maps API
      */
     public GeocodingResult[] getParallelGeocodedInfo(String scrapedAddress) {
-        GeocodingResult[] results = new GeocodingResult [0];
+        GeocodingResult[] results = new GeocodingResult[0];
         try {
             results = GeocodingApi.geocode(context, scrapedAddress).await();
         } catch(IOException e) {
