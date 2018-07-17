@@ -168,33 +168,40 @@ public class ScrapeTask implements Runnable {
             String line = "";
             String previousLine = "";
             String data = "";
+            boolean foundAddress = false;
+            boolean foundTerm = false;
+            boolean foundSF = false;
             while((line = bufferReader.readLine()) != null) {
                 // replace all horizontal whitespace chars with spaces for regex
                 // matching
                 line = line.replaceAll(" ", " ");
                 String lastToken = "";
                 ws.addLexItems(line);
-                if(line.matches("[a-zA-Z'@ ]*, [a-zA-Z]{2}( .*|[.])?")) {
-                    // match ADDRESSES like "Orlando, FL" or "Round Rock, ca
-                    // 91711" (with street address on the previous line)
-                    if(!(previousLine.contains("suite") || previousLine.contains("floor") || line.contains("suite")
-                            || line.contains("floor"))) {
-                        // avoid address with "suite" or "floor", usaully
-                        // the office address
-                        if(line.length() < 35) {
-                            // avoid matching random text by limiting
-                            // linelength
-                            data = previousLine.length() < 35 ? (previousLine + ", " + line) : line;
-                            ParallelScraper.address.offer(new Entry(taskPageNumber, data));
+                if(!foundAddress) {
+                    if(line.matches("[a-zA-Z'@ ]*, [a-zA-Z]{2}( .*|[.])?")) {
+                        // match ADDRESSES like "Orlando, FL" or "Round Rock, ca
+                        // 91711" (with street address on the previous line)
+                        if(!(previousLine.contains("suite") || previousLine.contains("floor") || line.contains("suite")
+                                || line.contains("floor"))) {
+                            // avoid address with "suite" or "floor", usaully
+                            // the office address
+                            if(line.length() < 35) {
+                                // avoid matching random text by limiting
+                                // linelength
+                                data = previousLine.length() < 35 ? (previousLine + ", " + line) : line;
+                                ParallelScraper.address.offer(new Entry(taskPageNumber, data));
+                                foundAddress = true;
+                            }
                         }
-                    }
-                } else if(line.matches(".*, [a-zA-Z]{2}( .*|[.])?")) {
-                    // match ADDRESSES like "222 W Avenida Valencia,
-                    // Orlando, FL" or "222 W Avenida Valencia, Round Rock,
-                    // TX"
-                    if(!(line.contains("suite") || line.contains("floor"))) {
-                        if(line.length() < 70) {
-                            ParallelScraper.address.offer(new Entry(taskPageNumber, line));
+                    } else if(line.matches(".*, [a-zA-Z]{2}( .*|[.])?")) {
+                        // match ADDRESSES like "222 W Avenida Valencia,
+                        // Orlando, FL" or "222 W Avenida Valencia, Round Rock,
+                        // TX"
+                        if(!(line.contains("suite") || line.contains("floor"))) {
+                            if(line.length() < 70) {
+                                ParallelScraper.address.offer(new Entry(taskPageNumber, line));
+                                foundAddress = true;
+                            }
                         }
                     }
                 }
@@ -203,30 +210,32 @@ public class ScrapeTask implements Runnable {
                     // character replacement/parsing issue
                     try {
                         String token = ws.nextToken();
-                        if(token.toLowerCase().equals("lease") || token.toLowerCase().equals("leased")) {
+                        if(!foundTerm && (token.equals("lease") || token.equals("leased"))) {
                             // match LEASE TERMS of the property
                             ParallelScraper.term.offer(new Entry(taskPageNumber, "Lease"));
-                        } else if(token.toLowerCase().equals("sale")) {
+                        } else if(!foundTerm && token.equals("sale")) {
                             // match SALE TERMS of the property
                             ParallelScraper.term.offer(new Entry(taskPageNumber, "Sale"));
                         } else if(token.matches("([a-zA-Z0-9]+[.])*[a-zA-Z0-9]+@[a-zA-Z0-9]+.*")) {
                             // match EMAILS
                             ParallelScraper.emails.offer(new Entry(taskPageNumber, token));
-                        } else if(token.matches("s[.]?f[.]?") || token.matches("sq[.||ft]?") || token.equals("square")
-                                || token.contains("ft.*") || token.equals("±")) {
+                        } else if(!foundSF && (token.matches("s[.]?f[.]?|sq[.||ft]?") || token.equals("square")
+                                || token.contains("ft.*") || token.equals("±"))) {
                             // match SQUARE FOOTAGES like "4,500 sf" or
                             // "4,500 square feet"
                             if(lastToken.matches("[,±0-9/+//-]{3,}")) {
-                                ParallelScraper.squareFootage.offer(
-                                        new Entry(taskPageNumber, lastToken.replace("±", "").replace("+/-", "")));
+                                Entry entry = new Entry(taskPageNumber, lastToken.replace("±", "").replace("+/-", ""));
+                                ParallelScraper.squareFootage.offer(entry);
+                                foundSF = true;
                             }
                         } else if((token.matches("feet[:]?") || token.matches("(±||(/+//-))")) && ws.hasMoreTokens()) {
                             // match SQUARE FOOTAGES like "square feet:
                             // 4,500" or "± 4,500"
                             String next = ws.nextToken();
                             if(next.matches("[,±0-9/+//-]{3,}")) {
-                                ParallelScraper.squareFootage
-                                        .offer(new Entry(taskPageNumber, next.replace("±", "").replace("+/-", "")));
+                                Entry entry = new Entry(taskPageNumber, next.replace("±", "").replace("+/-", ""));
+                                ParallelScraper.squareFootage.offer(entry);
+                                foundSF = true;
                             }
                         } else if(token.matches("[0-9]{3}") && lastToken.matches("[0-9]{3}") && ws.hasMoreTokens()) {
                             // match PHONE NUMBERS like "425 241 7707"
