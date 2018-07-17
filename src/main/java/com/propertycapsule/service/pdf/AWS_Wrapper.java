@@ -1,5 +1,4 @@
 /**
- * 
  * @author Zack Rossman
  * @version 7/5/18
  * 
@@ -40,7 +39,6 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
                 "/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/_20151113 Lonetree.pdf");
         ParallelScraper pScraper = new ParallelScraper();
         File jsonResult = pScraper.scrape(tempPdfFile);
-//        File jsonResult = AWS_Scrape.scrape(tempPdfFile);
         s3Client.putObject(s3OutputBucket, "test.json", jsonResult);
     }
 
@@ -61,18 +59,22 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
         String fileExtension = s3InputKey.substring(s3InputKey.length() - 4, s3InputKey.length()).toLowerCase();
         // only handle .pdf uploads to S3
         if(fileExtension.equals(".pdf")) {
-            File tempPdfFile = createTmp("flyer", ".pdf");
-            if(s3Client.doesObjectExist(s3InputBucket, s3InputKey)) {
-                writeObjToTmp(s3InputBucket, s3InputKey, tempPdfFile);
-                // File jsonResult = AWS_Scrape.scrape(tempPdfFile);
-                ParallelScraper pScraper = new ParallelScraper();
-                File jsonResult = pScraper.scrape(tempPdfFile);
-                String jsonOutputName = s3InputKey.substring(0, s3InputKey.length() - 4) + ".json";
-                s3Client.putObject(s3OutputBucket, jsonOutputName, jsonResult);
-            } else {
-                // handle case where s3 object cannot be retrieved
-                s3Client.putObject(s3OutputBucket, s3InputKey + "_NOT_FOUND", tempPdfFile);
-            }
+            try {
+                File tempPdfFile = File.createTempFile("flyer", ".pdf");
+                if(s3Client.doesObjectExist(s3InputBucket, s3InputKey)) {
+                    writeObjToTmp(s3InputBucket, s3InputKey, tempPdfFile);
+                    // File jsonResult = AWS_Scrape.scrape(tempPdfFile);
+                    ParallelScraper pScraper = new ParallelScraper();
+                    File jsonResult = pScraper.scrape(tempPdfFile);
+                    String jsonOutputName = s3InputKey.substring(0, s3InputKey.length() - 4) + ".json";
+                    s3Client.putObject(s3OutputBucket, jsonOutputName, jsonResult);
+                } else {
+                    // handle case where s3 object cannot be retrieved
+                    s3Client.putObject(s3OutputBucket, s3InputKey + "_NOT_FOUND", tempPdfFile);
+                }
+            } catch(IOException e) {
+                e.printStackTrace();
+            } 
         }
         return s3InputKey;
     }
@@ -118,24 +120,5 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
                 e.printStackTrace();
             }
         }
-    }
-
-    /**
-     * Create a temporary file
-     * 
-     * @param name
-     *            of the temp file
-     * @param extension
-     *            of the temp file
-     * @return the temp
-     */
-    public static File createTmp(String name, String extension) {
-        File output = null;
-        try {
-            output = File.createTempFile(name, extension);
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
-        return output;
     }
 }

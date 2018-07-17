@@ -10,10 +10,8 @@ package com.propertycapsule.service.pdf;
 
 import com.google.maps.*;
 import com.google.maps.errors.ApiException;
-import com.google.gson.*;
 import com.google.maps.model.*;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,15 +20,12 @@ import org.apache.commons.text.similarity.LevenshteinDistance;
 public class Geocode {
     public static Keys properties = new Keys();
     public GeoApiContext context;
-    public Gson gson;
-    public HashMap<String, String> map = new HashMap<String, String>();
     public final String[] accurateTypes = { "STREET_NUMBER", "PREMISE", "SUBPREMISE", "INTERSECTION" };
     public final String[] approximateTypes = { "ROUTE", "LOCALITY", "POSTAL CODE", "NEIGHBORHOOD" };
     public LevenshteinDistance levDistance = new LevenshteinDistance();
 
     public Geocode() {
         context = new GeoApiContext.Builder().apiKey(properties.getKey("GoogleAPI")).build();
-        gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
     /**
@@ -39,16 +34,10 @@ public class Geocode {
      * @return Hashmap containing an address, latitude, and longitude supplied
      *         by Google Maps API
      */
-    public void getParallelGeocodedInfo(String scrapedAddress) {
+    public GeocodingResult[] getParallelGeocodedInfo(String scrapedAddress) {
+        GeocodingResult[] results = new GeocodingResult [0];
         try {
-            GeocodingResult[] results = GeocodingApi.geocode(context, scrapedAddress).await();
-            if(results.length > 0) {
-                ParallelScraper.geocodedAddress = gson.toJson(results[0].formattedAddress).replaceAll("\"", "");
-                ParallelScraper.addressType = gson.toJson(results[0].addressComponents[0].types[0]).replaceAll("\"", "");
-                ParallelScraper.latitude = gson.toJson(results[0].geometry.location.lat);
-                ParallelScraper.longitude = gson.toJson(results[0].geometry.location.lng);
-                ParallelScraper.levDistance = getLevDistance(scrapedAddress, results[0].formattedAddress);
-            }
+            results = GeocodingApi.geocode(context, scrapedAddress).await();
         } catch(IOException e) {
             e.printStackTrace();
         } catch(InterruptedException i) {
@@ -56,40 +45,12 @@ public class Geocode {
         } catch(ApiException a) {
             a.printStackTrace();
         }
-    }
-
-    /**
-     * @param scrapedAddress
-     *            the address scraped from the pdf in Read_Text
-     * @return Hashmap containing an address, latitude, and longitude supplied
-     *         by Google Maps API
-     */
-    public HashMap<String, String> getGeocodedInfo(String scrapedAddress) {
-        // if map not cleared, failed geocode request returns last successful
-        // address
-        map.clear();
-        try {
-            GeocodingResult[] results = GeocodingApi.geocode(context, scrapedAddress).await();
-            if(results.length > 0) {
-                map.put("address", gson.toJson(results[0].formattedAddress));
-                map.put("latitude", gson.toJson(results[0].geometry.location.lat));
-                map.put("longitude", gson.toJson(results[0].geometry.location.lng));
-                map.put("type", gson.toJson(results[0].addressComponents[0].types[0]).replaceAll("\"", ""));
-                map.put("levDistance", getLevDistance(scrapedAddress, results[0].formattedAddress));
-            }
-        } catch(IOException e) {
-            e.printStackTrace();
-        } catch(InterruptedException i) {
-            i.printStackTrace();
-        } catch(ApiException a) {
-            a.printStackTrace();
-        }
-        return map;
+        return results;
     }
 
     /**
      * Calculate the similarity of the scraped string and geocoded string using
-     * LevDistance alg
+     * LevDistance alg (NOT USED IN VERION 7/18/18)
      * 
      * @param scrapedAddress
      * @param geocodedAddress

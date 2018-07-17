@@ -22,7 +22,6 @@ public class TestOutput {
     public static String inputPdfName = "";
 
     public static void main(String[] args) {
-        // scrapeDirectory("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Edge/");
         scrapeDirectory("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/");
     }
 
@@ -57,15 +56,13 @@ public class TestOutput {
      */
     public static void scrapeDirectory(String directory) {
         ArrayList<String> inputPdfNames = getInputFilenames(new File(directory));
+        ParallelScraper pScraper = null;
         for(String pdfName : inputPdfNames) {
-            System.out.println(pdfName);
             inputPdfName = pdfName;
+            pScraper = new ParallelScraper();
             File file = new File(directory + pdfName);
-            File messyTxt = AWS_Scrape.pdfToTxt(file);
-            File cleanTxt = AWS_Scrape.cleanTxt(messyTxt);
-            HashMap<String, ArrayList<String>> propertyData = AWS_Scrape.scrapeTxt(cleanTxt);
-            resultsToCsv(propertyData);
-            // AWS_Scrape.resultsToJson(propertyData);
+            pScraper.scrape(file);
+            resultsToCsv();
         }
     }
 
@@ -77,7 +74,7 @@ public class TestOutput {
      * @param inputPdfNames
      *            arraylist of names of pdfs that were scraped
      */
-    public static void resultsToCsv(HashMap<String, ArrayList<String>> results) {
+    public static void resultsToCsv() {
         File outputCsv = new File(outputFilePath + "output.csv");
         StringBuilder sb = new StringBuilder();
         FileWriter pw = null;
@@ -86,23 +83,45 @@ public class TestOutput {
                 outputCsv.createNewFile();
                 pw = new FileWriter(new File(outputFilePath + "output.csv"), true);
                 sb.append(
-                        "PDFName, Type, Scraped Address, Lev Distance, Geocoded Address, Latitude, Term, Emails, Longitude, Phone Numbers, Square Footage, Contact Names\n");
+                        "PDFName, Scraped Address, Term, Square Footage, Emails, Phone Numbers, Contact Names\n");
             } else {
                 pw = new FileWriter(new File(outputFilePath + "output.csv"), true);
             }
             sb.append("\"" + inputPdfName + "\"");
-            for(HashMap.Entry<String, ArrayList<String>> entry : results.entrySet()) {
-                ArrayList<String> propertyData = entry.getValue();
-                sb.append(',');
-                if(propertyData.size() > 0) {
-                    String data = propertyData.get(0);
-                    for(int j = 1; j < propertyData.size(); j++) {
-                        data += "/ " + propertyData.get(j);
-                    }
-                    // avoid accidentally parsing for commas in the string
-                    sb.append("\"" + data + "\"");
-                }
+            sb.append(',');
+            String entry = ParallelScraper.address.peek() != null ? ParallelScraper.address.peek().getValue(): "**";
+            sb.append("\"" + entry + "\"");
+            sb.append(',');
+            entry = ParallelScraper.term.peek() != null ? ParallelScraper.term.peek().getValue(): "**";
+            sb.append("\"" + entry + "\" ");
+            sb.append(',');
+            entry = ParallelScraper.squareFootage.peek() != null ? ParallelScraper.squareFootage.peek().getValue(): "**";
+            sb.append("\"" + entry + "\"");
+            sb.append(',');
+
+            String emailAcc = "";
+            Entry email;
+            while((email = ParallelScraper.emails.poll()) != null) {
+                emailAcc+= email.getValue()+"/";
             }
+            entry = emailAcc.length() > 0 ? emailAcc : "**,";
+            sb.append("\""+entry+"\"");
+            sb.append(',');
+            String phoneAcc = "";
+            Entry phone;
+            while((phone = ParallelScraper.phoneNumbers.poll()) != null) {
+                phoneAcc += phone.getValue()+" /";
+            }
+            entry = phoneAcc.length() > 0 ? phoneAcc : "**";
+            sb.append("\""+entry+"\"");
+            sb.append(',');
+            String contactAcc = "";
+            Entry contact;
+            while((contact = ParallelScraper.contactNames.poll()) != null) {
+                contactAcc += contact.getValue()+"/";
+            }
+            entry = contactAcc.length() > 0 ? contactAcc : "**";
+            sb.append("\""+contactAcc+"\"");
             pw.write(sb.append('\n').toString());
         } catch(IOException e) {
             e.printStackTrace();

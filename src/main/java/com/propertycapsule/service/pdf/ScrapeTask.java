@@ -4,6 +4,7 @@
  * 
  * Facilitates the scraping of multiple txt docs in parallel
  */
+
 package com.propertycapsule.service.pdf;
 
 import java.io.BufferedReader;
@@ -84,9 +85,9 @@ public class ScrapeTask implements Runnable {
     }
 
     public void run() {
-        System.out.println("Running "+Integer.toString(taskPageNumber));
+//        System.out.println("Running "+Integer.toString(taskPageNumber));
         scrapeTxt();
-        System.out.println("Finished "+Integer.toString(taskPageNumber));
+//        System.out.println("Finished "+Integer.toString(taskPageNumber));
     }
     
     /**

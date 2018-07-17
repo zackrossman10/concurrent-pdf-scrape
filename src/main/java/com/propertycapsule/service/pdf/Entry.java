@@ -3,7 +3,6 @@
  * @version 7/17/18
  * 
  * Class for entries in a priority queue, sortable by the key (page number)
- * 
  */
 
 package com.propertycapsule.service.pdf;

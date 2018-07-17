@@ -17,7 +17,6 @@ import java.util.PriorityQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.json.simple.JSONArray;
@@ -26,6 +25,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.google.maps.model.GeocodingResult;
 
 public class ParallelScraper {
     //priority queues to accumulate property data scraped by threads operating in parallel
@@ -35,31 +35,22 @@ public class ParallelScraper {
     public static PriorityQueue<Entry> emails;
     public static PriorityQueue<Entry> phoneNumbers;
     public static PriorityQueue<Entry> contactNames;
-    //variables modified by Geocoder
-    public static String geocodedAddress;
-    public static String addressType;
-    public static String latitude;
-    public static String longitude;
-    public static String levDistance;
 
     public static Geocode geocoder;
+    public static Gson gson;
     public static final int parsedPageLength = 2000;
     public static final int poolSize = 5;
 
     public ParallelScraper() {
         //redeclare static vars to start from clean slate
-        geocoder = new Geocode();
         address = new PriorityQueue<>();
         term = new PriorityQueue<>();
         squareFootage = new PriorityQueue<>();
         emails = new PriorityQueue<>();
         phoneNumbers = new PriorityQueue<>();
         contactNames = new PriorityQueue<>();
-        geocodedAddress = "";
-        addressType = "";
-        latitude = "";
-        longitude = "";
-        levDistance = "";
+        geocoder = new Geocode();
+        gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
     public File scrape(File input) {
@@ -100,9 +91,7 @@ public class ParallelScraper {
                     e.printStackTrace();
                 }
             }
-        }
-        //Use Geocoder API to validate address, get property lat/long
-        getGeocodedAddress();  
+        } 
         return resultsToJson();
     }
 
@@ -164,7 +153,7 @@ public class ParallelScraper {
         while(true) {
             textSegment = pdfText.substring(startIndex, endIndex);
             try {
-                outputTxt = AWS_Wrapper.createTmp("Output" + Integer.toString(pageCounter), ".txt");
+                outputTxt = File.createTempFile("Output" + Integer.toString(pageCounter), ".txt");
                 writer = new FileWriter(outputTxt);
                 writer.write(textSegment);
             } catch(IOException e) {
@@ -197,75 +186,80 @@ public class ParallelScraper {
      * @return json file containing property information
      */
     public File resultsToJson() {
-        File jsonOutput = AWS_Wrapper.createTmp("output", ".json");
+        File jsonOutput = null;
         try {
-            jsonOutput.createNewFile();
+            jsonOutput = File.createTempFile("output", ".json");
+            JSONObject fileObject = new JSONObject();
+            if(!address.isEmpty()) {
+                String scrapedAddress = address.peek().getValue();
+                fileObject.put("scraped_address", scrapedAddress);
+                //Use Geocoder API to validate address, get property lat/long
+                GeocodingResult[] geoResults = geocoder.getParallelGeocodedInfo(scrapedAddress);
+                if(geoResults.length > 0) {
+                    fileObject.put("geocoded_address", gson.toJson(geoResults[0].formattedAddress).replaceAll("\"", ""));
+                    fileObject.put("address_type", gson.toJson(geoResults[0].addressComponents[0].types[0]).replaceAll("\"", ""));
+                    fileObject.put("latitude", gson.toJson(geoResults[0].geometry.location.lat));
+                    fileObject.put("longitude", gson.toJson(geoResults[0].geometry.location.lng));
+                }
+            }
+            if(!term.isEmpty()) {
+                fileObject.put("term", term.peek().getValue());
+            }
+            if(!squareFootage.isEmpty()) {
+                fileObject.put("square_footage", squareFootage.peek().getValue());
+            }
+            //for fields that can include mulitple vals, put each val to a JSON list
+            if(!emails.isEmpty()) {
+                JSONArray list = new JSONArray();
+                while(!emails.isEmpty()) {
+                    String data = emails.poll().getValue();
+                    if(!list.contains(data)) {
+                        list.add(data);
+                    }
+                }
+                fileObject.put("emails", list);
+            }
+            if(!phoneNumbers.isEmpty()) {
+                JSONArray list = new JSONArray();
+                while(!phoneNumbers.isEmpty()) {
+                    String data = phoneNumbers.poll().getValue();
+                    if(!list.contains(data)) {
+                        list.add(data);
+                    }
+                }
+                fileObject.put("phone_numbers", list);
+            }
+            if(!contactNames.isEmpty()) {
+                JSONArray list = new JSONArray();
+                while(!contactNames.isEmpty()) {
+                    String data = contactNames.poll().getValue();
+                    if(!list.contains(data)) {
+                        list.add(data);
+                    }
+                }
+                fileObject.put("contact_names", list);
+            }
+            FileWriter filew = null;
+            try {
+                filew = new FileWriter(jsonOutput);
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                JsonParser jp = new JsonParser();
+                JsonElement je = jp.parse(fileObject.toJSONString());
+                filew.write(gson.toJson(je));
+                filew.flush();
+            } catch(IOException e) {
+                e.printStackTrace();
+            } finally {
+                if(filew != null) {
+                    try {
+                        filew.close();
+                    } catch(IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
         } catch(IOException e1) {
             e1.printStackTrace();
-        }
-        JSONObject fileObject = new JSONObject();
-        if(!address.isEmpty()) {
-            fileObject.put("address", address.peek().getValue());
-            fileObject.put("geocoded_address", geocodedAddress);
-            fileObject.put("address_type", addressType);
-            fileObject.put("latitude", latitude);
-            fileObject.put("longitude", longitude);
-            fileObject.put("lev_distance", levDistance);
-        }
-        if(!term.isEmpty()) {
-            fileObject.put("term", term.peek().getValue());
-        }
-        if(!squareFootage.isEmpty()) {
-            fileObject.put("square_footage", squareFootage.peek().getValue());
-        }
-        if(!emails.isEmpty()) {
-            JSONArray list = new JSONArray();
-            while(!emails.isEmpty()) {
-                String data = emails.poll().getValue();
-                if(!list.contains(data)) {
-                    list.add(data);
-                }
-            }
-            fileObject.put("emails", list);
-        }
-        if(!phoneNumbers.isEmpty()) {
-            JSONArray list = new JSONArray();
-            while(!phoneNumbers.isEmpty()) {
-                String data = phoneNumbers.poll().getValue();
-                if(!list.contains(data)) {
-                    list.add(data);
-                }
-            }
-            fileObject.put("phone_numbers", list);
-        }
-        if(!contactNames.isEmpty()) {
-            JSONArray list = new JSONArray();
-            while(!contactNames.isEmpty()) {
-                String data = contactNames.poll().getValue();
-                if(!list.contains(data)) {
-                    list.add(data);
-                }
-            }
-            fileObject.put("contact_names", list);
-        }
-        FileWriter filew = null;
-        try {
-            filew = new FileWriter(jsonOutput);
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            JsonParser jp = new JsonParser();
-            JsonElement je = jp.parse(fileObject.toJSONString());
-            filew.write(gson.toJson(je));
-            filew.flush();
-        } catch(IOException e) {
-            e.printStackTrace();
-        } finally {
-            if(filew != null) {
-                try {
-                    filew.close();
-                } catch(IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         return jsonOutput;
     }
