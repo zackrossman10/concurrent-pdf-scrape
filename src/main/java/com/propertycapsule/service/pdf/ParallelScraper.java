@@ -13,38 +13,52 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.PriorityQueue;
-
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
-public class ParallelScrape {
+public class ParallelScraper {
     public static HashMap<String, String> abbreviations = AWS_Scrape.abbreviations;
     public static Geocode geocoder = new Geocode();
-    public static PriorityQueue<Entry> address = new PriorityQueue<>();
-    public static PriorityQueue<Entry> term = new PriorityQueue<>();
-    public static PriorityQueue<Entry> squareFootage = new PriorityQueue<>();
-    public static PriorityQueue<Entry> emails = new PriorityQueue<>();
-    public static PriorityQueue<Entry> phoneNumbers = new PriorityQueue<>();
-    public static PriorityQueue<Entry> contactNames = new PriorityQueue<>();
-    public static String geocodedAddress = "";
-    public static String addressType = "";
-    public static String latitude = "";
-    public static String longitude = "";
-    public static String levDistance = "";
+    public static PriorityQueue<Entry> address;
+    public static PriorityQueue<Entry> term;
+    public static PriorityQueue<Entry> squareFootage;
+    public static PriorityQueue<Entry> emails;
+    public static PriorityQueue<Entry> phoneNumbers;
+    public static PriorityQueue<Entry> contactNames;
+    public static String geocodedAddress;
+    public static String addressType;
+    public static String latitude;
+    public static String longitude;
+    public static String levDistance;
 
-    public static File scrape(File input) {
-//        File input = new File("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/144 Parnassas_colliers.pdf");
+    public ParallelScraper() {
+        address = new PriorityQueue<>();
+        term = new PriorityQueue<>();
+        squareFootage = new PriorityQueue<>();
+        emails = new PriorityQueue<>();
+        phoneNumbers = new PriorityQueue<>();
+        contactNames = new PriorityQueue<>();
+        geocodedAddress = "";
+        addressType = "";
+        latitude = "";
+        longitude = "";
+        levDistance = "";
+    }
+    
+    public File scrape(File input) {
+        // File input = new
+        // File("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/144
+        // Parnassas_colliers.pdf");
         PDDocument document = null;
         try {
             document = PDDocument.load(input);
             int numPages = document.getNumberOfPages();
-            for(int i = 1; i<=numPages; i++) {
+            for(int i = 1; i <= numPages; i++) {
                 ScraperThread thread = new ScraperThread(document, i);
                 thread.start();
             }
@@ -62,8 +76,8 @@ public class ParallelScrape {
         getGeocodedAddress();
         return resultsToJson();
     }
-    
-    public static void getGeocodedAddress() {
+
+    public void getGeocodedAddress() {
         if(!address.isEmpty()) {
             // normalize address strings to for better consistency with
             // geocoder
@@ -78,7 +92,7 @@ public class ParallelScrape {
             geocoder.getParallelGeocodedInfo(cleanEntry);
         }
     }
-    
+
     /**
      * Format the scraped information from all PDFs into one new .json file
      * 
@@ -88,8 +102,9 @@ public class ParallelScrape {
      *            -> arraylist of names of pdfs that were scraped
      * @return json file containing property information
      */
-    public static File resultsToJson() {
-        File jsonOutput = new File("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Output_Txts/HIIII.json");
+    public File resultsToJson() {
+        File jsonOutput = AWS_Wrapper.createTmp("output", ".json");
+//        File jsonOutput = new File("/Users/zacharycolerossman/Documents/ML_Flyer_Data/Output_Txts/HIIII.json");
         try {
             jsonOutput.createNewFile();
         } catch(IOException e1) {

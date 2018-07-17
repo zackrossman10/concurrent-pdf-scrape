@@ -35,11 +35,12 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
     public static Geocode geocoder = new Geocode();
 
     // simple aws testing code
-    public static void main(String[] args) {
-        S3Object o = s3Client.getObject(s3InputBucket, "33_Norfolk_SFRE_16_02xx.pdf");
+    public static void main(String[] args) {        
         File tempPdfFile = new File(
                 "/Users/zacharycolerossman/Documents/ML_Flyer_Data/Complete_Test_Set/_20151113 Lonetree.pdf");
-        File jsonResult = AWS_Scrape.scrape(tempPdfFile);
+        ParallelScraper pScraper = new ParallelScraper();
+        File jsonResult = pScraper.scrape(tempPdfFile);
+//        File jsonResult = AWS_Scrape.scrape(tempPdfFile);
         s3Client.putObject(s3OutputBucket, "test.json", jsonResult);
     }
 
@@ -58,17 +59,18 @@ public class AWS_Wrapper implements RequestHandler<Map<String, Map<String, Objec
         String s3InputKey = records.getJSONObject(0).getJSONObject("s3").getJSONObject("object").getString("key")
                 .replace("+", " ").replace("%2C", ",");
         String fileExtension = s3InputKey.substring(s3InputKey.length() - 4, s3InputKey.length()).toLowerCase();
-        //only handle .pdf uploads to S3
+        // only handle .pdf uploads to S3
         if(fileExtension.equals(".pdf")) {
             File tempPdfFile = createTmp("flyer", ".pdf");
             if(s3Client.doesObjectExist(s3InputBucket, s3InputKey)) {
                 writeObjToTmp(s3InputBucket, s3InputKey, tempPdfFile);
-//                File jsonResult = AWS_Scrape.scrape(tempPdfFile);
-                File jsonResult = ParallelScrape.scrape(tempPdfFile);
+                // File jsonResult = AWS_Scrape.scrape(tempPdfFile);
+                ParallelScraper pScraper = new ParallelScraper();
+                File jsonResult = pScraper.scrape(tempPdfFile);
                 String jsonOutputName = s3InputKey.substring(0, s3InputKey.length() - 4) + ".json";
                 s3Client.putObject(s3OutputBucket, jsonOutputName, jsonResult);
             } else {
-                //handle case where s3 object cannot be retrieved
+                // handle case where s3 object cannot be retrieved
                 s3Client.putObject(s3OutputBucket, s3InputKey + "_NOT_FOUND", tempPdfFile);
             }
         }
